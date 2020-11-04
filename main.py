@@ -1,6 +1,6 @@
 from flask import Flask, request
-from line_magic import LineMessagingClient, LineMessagingTracer
-from line_magic import TextMessage, StickerMessage
+from line_magic.line_magic import LineMessagingClient, LineMessagingTracer
+from line_magic.line_magic import TextMessage, StickerMessage
 
 with open("authToken.txt", "r") as f:
     cl = LineMessagingClient(channelAccessToken=f.read())
@@ -34,16 +34,6 @@ class Operations(object):
         msgs = [TextMessage("Thanks for invite me!")]
         cl.replyMessage(msgs)
 
-    @tracer.Operation("leave")
-    def got_leave(self, cl, msg):
-        print("LEAVE")
-        print(msg)
-
-    @tracer.Operation("postback")
-    def got_postback(self, cl, msg):
-        print("POSTBACK")
-        print(msg)
-
 
 class Contents(object):
     @tracer.Content("text")
@@ -53,31 +43,6 @@ class Contents(object):
     @tracer.Content("image")
     def got_image(self, cl, msg):
         msgs = [TextMessage("Kawaii!")]
-        cl.replyMessage(msgs)
-
-    @tracer.Content("video")
-    def got_video(self, cl, msg):
-        msgs = [TextMessage("Nice video!")]
-        cl.replyMessage(msgs)
-
-    @tracer.Content("audio")
-    def got_audio(self, cl, msg):
-        msgs = [TextMessage("Nice audio!")]
-        cl.replyMessage(msgs)
-
-    @tracer.Content("file")
-    def got_file(self, cl, msg):
-        msgs = [TextMessage("Nice file!")]
-        cl.replyMessage(msgs)
-
-    @tracer.Content("location")
-    def got_location(self, cl, msg):
-        msgs = [TextMessage("Nice location!")]
-        cl.replyMessage(msgs)
-
-    @tracer.Content("sticker")
-    def got_sticker(self, cl, msg):
-        msgs = [StickerMessage(1, 2)]
         cl.replyMessage(msgs)
 
 
@@ -96,15 +61,11 @@ class Commands(object):
 
 
 def app_callback():
-    try:
-        if request.method == "POST":
-            data = request.get_json()
-            for d in data["events"]:
-                tracer.trace(d, "Operation")
-        return "OK"
-    except:
-        return "Error"
-
+    if request.method == "POST":
+        data = request.get_json()
+        for d in data["events"]:
+            tracer.trace(d, "Operation")
+    return "OK"
 
 def createApp():
     app = Flask(__name__)
