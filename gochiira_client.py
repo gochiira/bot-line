@@ -27,3 +27,13 @@ class GochiiraClient():
             params={"page": page, "sort": sort, "order": order},
             headers=self.headers
         ).json()
+
+    def searchOnAscii2d(self, filename, contentType="image/jpeg"):
+        with open(filename, "rb") as f:
+            return requests.post(
+                f"{self.endpoint}/search/image/ascii2d",
+                files={
+                    "file": (filename.split("/")[-1], f.read(), contentType)
+                },
+                headers=self.headers
+            ).json()

@@ -3,9 +3,9 @@ from line_magic.line_magic import LineMessagingClient, LineMessagingTracer
 from line_magic.line_magic import TextMessage, FlexMessage
 from gochiira_client import GochiiraClient
 from copy import deepcopy
+import tempfile
 import json
 import os
-
 
 # 各種クライアントの作成
 with open("auth.json", "r", encoding="utf8") as f:
@@ -59,9 +59,21 @@ class Contents(object):
 
     @tracer.Content("image")
     def got_image(self, cl, msg):
-        with open("test.jpg", "wb") as f:
-            f.write(cl.getContent(msg["message"]["id"]))
-        msgs = [TextMessage("Kawaii!")]
+        with tempfile.TemporaryDirectory() as path:
+            with open(f"{path}/img.jpg", "wb") as f:
+                f.write(cl.getContent(msg["message"]["id"]))
+            imgs = icl.searchOnAscii2d(f"{path}/img.jpg")
+        contents = []
+        for d in imgs["data"]["result"]:
+            result = deepcopy(flex["image_search_result"])
+            result["action"]["uri"] = d["urls"]["source"]
+            result["body"]["contents"][0]["url"] = f"https://ascii2d.net{d['thumbnail']}"
+            result["body"]["contents"][1]["contents"][0]["text"] = d["size"]
+            result["body"]["contents"][2]["contents"][0]["text"] = d["artist"]
+            result["body"]["contents"][3]["contents"][0]["text"] = "Pixiv" if "pixiv" in d["urls"]["source"] else "Twitter"
+            result["footer"]["contents"][0]["contents"][0]["text"] = d["title"]
+            contents.append(result)
+        msgs = [FlexMessage({"type": "carousel", "contents": contents})]
         cl.replyMessage(msgs)
 
 
