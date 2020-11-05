@@ -17,7 +17,6 @@ with open("auth.json", "r", encoding="utf8") as f:
         authFile["illust"]["endpoint"]
     )
 
-
 # フレックスメッセージの読み出し
 flex = {}
 for file in os.listdir("flex"):
@@ -60,7 +59,6 @@ class Contents(object):
 
     @tracer.Content("image")
     def got_image(self, cl, msg):
-        print(msg["message"]["id"])
         with open("test.jpg", "wb") as f:
             f.write(cl.getContent(msg["message"]["id"]))
         msgs = [TextMessage("Kawaii!")]
