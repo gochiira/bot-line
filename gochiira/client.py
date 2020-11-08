@@ -14,6 +14,13 @@ class GochiiraClient():
             headers=self.headers
         ).json()
 
+    def getRecents(self, page=1, sort="d", order="d"):
+        return requests.get(
+            f"{self.endpoint}/search/all",
+            params={"page": page, "sort": sort, "order": order},
+            headers=self.headers
+        ).json()
+
     def getTagList(self, page=1, sort="c", order="d"):
         return requests.get(
             f"{self.endpoint}/catalog/tags",
@@ -25,6 +32,20 @@ class GochiiraClient():
         return requests.get(
             f"{self.endpoint}/catalog/characters",
             params={"page": page, "sort": sort, "order": order},
+            headers=self.headers
+        ).json()
+
+    def getArtistList(self, page=1, sort="c", order="d"):
+        return requests.get(
+            f"{self.endpoint}/catalog/artists",
+            params={"page": page, "sort": sort, "order": order},
+            headers=self.headers
+        ).json()
+
+    def searchWithTag(self, id, page=1, sort="d", order="d"):
+        return requests.get(
+            f"{self.endpoint}/search/tag",
+            params={"id": id, "page": page, "sort": sort, "order": order},
             headers=self.headers
         ).json()
 

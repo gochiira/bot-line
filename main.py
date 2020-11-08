@@ -1,7 +1,8 @@
 from flask import Flask, request
 from line_magic.line_magic import LineMessagingClient, LineMessagingTracer
 from line_magic.line_magic import TextMessage, FlexMessage
-from gochiira_client import GochiiraClient
+from gochiira.flex_generator import GochiiraFlexGenerator
+from gochiira.client import GochiiraClient
 from copy import deepcopy
 import tempfile
 import json
@@ -12,17 +13,11 @@ with open("auth.json", "r", encoding="utf8") as f:
     authFile = json.loads(f.read())
     cl = LineMessagingClient(channelAccessToken=authFile["line"]["token"])
     tracer = LineMessagingTracer(cl, prefix=["!", "?", "#", "."])
+    igl = GochiiraFlexGenerator("flex")
     icl = GochiiraClient(
         authFile["illust"]["token"],
         authFile["illust"]["endpoint"]
     )
-
-# フレックスメッセージの読み出し
-flex = {}
-for file in os.listdir("flex"):
-    with open(os.path.join("flex", file), "r", encoding="utf-8") as f:
-        data = json.loads(f.read())
-    flex[file[:-5]] = data
 
 
 # イベント別受信処理
@@ -55,6 +50,7 @@ class Operations(object):
 class Contents(object):
     @tracer.Content("text")
     def got_text(self, cl, msg):
+        print(msg)
         self.trace(msg, "Command")
 
     @tracer.Content("image")
@@ -62,18 +58,8 @@ class Contents(object):
         with tempfile.TemporaryDirectory() as path:
             with open(f"{path}/img.jpg", "wb") as f:
                 f.write(cl.getContent(msg["message"]["id"]))
-            imgs = icl.searchOnAscii2d(f"{path}/img.jpg")
-        contents = []
-        for d in imgs["data"]["result"]:
-            result = deepcopy(flex["image_search_result"])
-            result["action"]["uri"] = d["urls"]["source"]
-            result["body"]["contents"][0]["url"] = f"https://ascii2d.net{d['thumbnail']}"
-            result["body"]["contents"][1]["contents"][0]["text"] = d["size"]
-            result["body"]["contents"][2]["contents"][0]["text"] = d["artist"]
-            result["body"]["contents"][3]["contents"][0]["text"] = "Pixiv" if "pixiv" in d["urls"]["source"] else "Twitter"
-            result["footer"]["contents"][0]["contents"][0]["text"] = d["title"]
-            contents.append(result)
-        msgs = [FlexMessage({"type": "carousel", "contents": contents})]
+            search_result = icl.searchOnAscii2d(f"{path}/img.jpg")
+        msgs = [igl.generateImageSearchResultCarousel(search_result)]
         cl.replyMessage(msgs)
 
 
@@ -92,52 +78,112 @@ class Commands(object):
         cl.replyMessage(msgs)
 
     @tracer.Command(prefix=False)
-    def 検索方法(self, cl, msg):
-        msgs = [FlexMessage(flex["search_methods"])]
+    def イラスト検索(self, cl, msg):
+        msgs = [FlexMessage(igl.flex["search_methods"])]
         cl.replyMessage(msgs)
 
     @tracer.Command(prefix=False)
     def タグから探す(self, cl, msg):
         tags = icl.getTagList()
-        contents = []
-        for d in tags["data"]["contents"][:10]:
-            result = deepcopy(flex["search_tag"])
-            result["action"]["text"] = f"タグ検索 {d['id']}"
-            result["body"]["contents"][1]["text"] = f"該当数: {d['count']}"
-            result["body"]["contents"][2]["text"] = f"いいね数: {d['lcount']}"
-            result["footer"]["contents"][0]["contents"][0]["text"] = d["name"]
-            contents.append(result)
-        msgs = [FlexMessage({"type": "carousel", "contents": contents})]
+        msgs = [igl.generateTagSearchCarousel(tags, title="タグ検索")]
         cl.replyMessage(msgs)
 
     @tracer.Command(prefix=False)
     def キャラクターから探す(self, cl, msg):
         tags = icl.getCharacterList()
-        contents = []
-        for d in tags["data"]["contents"][:10]:
-            result = deepcopy(flex["search_tag"])
-            result["action"]["text"] = f"キャラクター検索 {d['id']}"
-            result["body"]["contents"][1]["text"] = f"該当数: {d['count']}"
-            result["body"]["contents"][2]["text"] = f"いいね数: {d['lcount']}"
-            result["footer"]["contents"][0]["contents"][0]["text"] = d["name"]
-            contents.append(result)
-        msgs = [FlexMessage({"type": "carousel", "contents": contents})]
+        msgs = [igl.generateTagSearchCarousel(tags, title="キャラクター検索")]
         cl.replyMessage(msgs)
 
     @tracer.Command(prefix=False)
-    def ランキングから探す(self, cl, msg):
-        ranking = icl.getRankings()
-        contents = []
-        for d in ranking["data"]["imgs"][:9]:
-            result = deepcopy(flex["search_result"])
-            result["action"]["uri"] = d["originUrl"]
-            result["body"]["contents"][0]["url"] = f"https://cdn.gochiusa.team/illusts/thumb/{d['illustID']}.jpg"
-            result["body"]["contents"][1]["contents"][0]["text"] = d["artist"]["name"]
-            result["body"]["contents"][2]["contents"][0]["text"] = d["date"].split(" ")[0]
-            result["body"]["contents"][3]["contents"][0]["text"] = d["originService"]
-            result["footer"]["contents"][0]["contents"][0]["text"] = d["title"]
-            contents.append(result)
-        msgs = [FlexMessage({"type": "carousel", "contents": contents})]
+    def 絵師から探す(self, cl, msg):
+        artists = icl.getArtistList()
+        msgs = [igl.generateTagSearchCarousel(artists, title="絵師検索")]
+        cl.replyMessage(msgs)
+
+    @tracer.Command(prefix=False)
+    def 画像から探す(self, cl, msg):
+        msgs = [TextMessage("検索したい画像を送信または転送してください!\n(検索には10~15秒程度かかります)")]
+        cl.replyMessage(msgs)
+
+    @tracer.Command(prefix=False)
+    def ランキング検索(self, cl, msg):
+        search_result = icl.getRankings()
+        msgs = [igl.generateNormalSearchResultCarousel(search_result)]
+        cl.replyMessage(msgs)
+
+    @tracer.Command(prefix=False, inpart=True)
+    def 新着イラスト(self, cl, msg):
+        args = self.getArg(["新着イラスト"], msg["message"]["text"], ignoreCase=False)
+        if not args:
+            search_result = icl.getRecents()
+        elif not args[0].isdigit():
+            search_result = icl.getRecents()
+        else:
+            page = int(args[0])
+            if page % 2 == 0:
+                search_result = icl.getRecents(page=page - 1)
+            else:
+                search_result = icl.getRecents(page=page)
+            if page % 2 == 0:
+                search_result["data"]["imgs"] = search_result["data"]["imgs"][10:]
+        msgs = [igl.generateNormalSearchResultCarousel(search_result)]
+        cl.replyMessage(msgs)
+
+    @tracer.Command(prefix=False, inpart=True)
+    def タグ検索(self, cl, msg):
+        args = self.getArg(["タグ検索"], msg["message"]["text"], ignoreCase=False)
+        if not args:
+            msgs = [TextMessage("タグIDを指定してください")]
+            cl.replyMessage(msgs)
+            return
+        if not args[0].isdigit():
+            msgs = [TextMessage("タグIDが正しくありません")]
+            cl.replyMessage(msgs)
+            return
+        search_result = icl.searchWithTag(args[0])
+        if not search_result:
+            msgs = [TextMessage("タグIDが正しくないか、該当する結果がありませんでした")]
+            cl.replyMessage(msgs)
+            return
+        msgs = [igl.generateNormalSearchResultCarousel(search_result)]
+        cl.replyMessage(msgs)
+
+    @tracer.Command(prefix=False, inpart=True)
+    def キャラクター検索(self, cl, msg):
+        args = self.getArg(["キャラクター検索"], msg["message"]["text"], ignoreCase=False)
+        if not args:
+            msgs = [TextMessage("キャラクターIDを指定してください")]
+            cl.replyMessage(msgs)
+            return
+        if not args[0].isdigit():
+            msgs = [TextMessage("キャラクターIDが正しくありません")]
+            cl.replyMessage(msgs)
+            return
+        search_result = icl.searchWithTag(args[0])
+        if not search_result:
+            msgs = [TextMessage("キャラクターIDが正しくないか、該当する結果がありませんでした")]
+            cl.replyMessage(msgs)
+            return
+        msgs = [igl.generateNormalSearchResultCarousel(search_result)]
+        cl.replyMessage(msgs)
+
+    @tracer.Command(prefix=False, inpart=True)
+    def 絵師検索(self, cl, msg):
+        args = self.getArg(["絵師検索"], msg["message"]["text"], ignoreCase=False)
+        if not args:
+            msgs = [TextMessage("絵師IDを指定してください")]
+            cl.replyMessage(msgs)
+            return
+        if not args[0].isdigit():
+            msgs = [TextMessage("絵師IDが正しくありません")]
+            cl.replyMessage(msgs)
+            return
+        search_result = icl.searchWithTag(args[0])
+        if not search_result:
+            msgs = [TextMessage("絵師IDが正しくないか、該当する結果がありませんでした")]
+            cl.replyMessage(msgs)
+            return
+        msgs = [igl.generateNormalSearchResultCarousel(search_result)]
         cl.replyMessage(msgs)
 
 
@@ -147,6 +193,7 @@ def app_callback():
         for d in data["events"]:
             tracer.trace(d, "Operation")
     return "OK"
+
 
 def createApp():
     app = Flask(__name__)
