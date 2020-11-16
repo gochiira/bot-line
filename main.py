@@ -3,21 +3,27 @@ from line_magic.line_magic import LineMessagingClient, LineMessagingTracer
 from line_magic.line_magic import TextMessage, FlexMessage
 from gochiira.flex_generator import GochiiraFlexGenerator
 from gochiira.client import GochiiraClient
+from dotenv import load_dotenv
+from nudenet import NudeClassifierLite
 from copy import deepcopy
+import requests
 import tempfile
-import json
 import os
 
+# .env読み出し
+load_dotenv(verbose=True, override=True)
+
 # 各種クライアントの作成
-with open("auth.json", "r", encoding="utf8") as f:
-    authFile = json.loads(f.read())
-    cl = LineMessagingClient(channelAccessToken=authFile["line"]["token"])
-    tracer = LineMessagingTracer(cl, prefix=["!", "?", "#", "."])
-    igl = GochiiraFlexGenerator("flex")
-    icl = GochiiraClient(
-        authFile["illust"]["token"],
-        authFile["illust"]["endpoint"]
-    )
+classifier = NudeClassifierLite()
+cl = LineMessagingClient(
+    channelAccessToken=os.environ.get("LINE_CHANNEL_TOKEN")
+)
+tracer = LineMessagingTracer(cl, prefix=["!", "?", "#", "."])
+igl = GochiiraFlexGenerator("flex")
+icl = GochiiraClient(
+    os.environ.get("API_TOKEN"),
+    os.environ.get("API_ENDPOINT")
+)
 
 
 # イベント別受信処理
@@ -33,7 +39,7 @@ class Operations(object):
 
     @tracer.Operation("follow")
     def got_follow(self, cl, msg):
-        msgs = [TextMessage("Thanks for add me!")]
+        msgs = [TextMessage("友達登録ありがとうございます!")]
         cl.replyMessage(msgs)
 
     @tracer.Operation("unfollow")
@@ -59,6 +65,14 @@ class Contents(object):
             with open(f"{path}/img.jpg", "wb") as f:
                 f.write(cl.getContent(msg["message"]["id"]))
             search_result = icl.searchOnAscii2d(f"{path}/img.jpg")
+            new_result = []
+            for r in search_result["data"]["result"]:
+                with open(f"{path}/check.jpg", "wb") as f:
+                    f.write(requests.get(f"https://ascii2d.net{r['thumbnail']}").content)
+                nsfw_result = classifier.classify(f"{path}/check.jpg")
+                if nsfw_result[f"{path}/check.jpg"]["unsafe"] < 0.55:
+                    new_result.append(r)
+            search_result["data"]["result"] = new_result
         msgs = [igl.generateImageSearchResultCarousel(search_result)]
         cl.replyMessage(msgs)
 
@@ -204,7 +218,7 @@ def createApp():
     tracer.startup()
     return app
 
+app = createApp()
 
 if __name__ == "__main__":
-    app = createApp()
-    app.run(host="localhost", port=8080)
+    app.run(host="0.0.0.0", port=1204)

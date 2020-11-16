@@ -7,7 +7,7 @@
             "action": {
                 "type": "message",
                 "label": "all",
-                "text": "全てから探す"
+                "text": "新着イラスト"
             },
             "body": {
                 "type": "box",
@@ -46,7 +46,7 @@
             "action": {
                 "type": "message",
                 "label": "ranking",
-                "text": "ランキングから探す"
+                "text": "ランキング検索"
             },
             "body": {
                 "type": "box",
