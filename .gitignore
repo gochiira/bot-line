@@ -1,5 +1,4 @@
-authToken.txt
-auth.json
 test.jpg
 *.pyc
 */*.pyc
+.env

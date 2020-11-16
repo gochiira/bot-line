@@ -1,0 +1,9 @@
+.env
+.git
+.github
+gochiira.lbd
+auth.json
+docker-compose.yml
+tester
+__pycache__
+README.md
