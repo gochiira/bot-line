@@ -4,6 +4,7 @@ FROM python:3.8.6-slim-buster
 WORKDIR /app
 COPY ./requirements.txt ./
 COPY ./line_magic/requirements.txt ./line_magic_requirements.txt
+RUN pip install https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow_cpu-2.3.0-cp38-cp38-manylinux2010_x86_64.whl
 RUN pip install -r requirements.txt
 RUN pip install -r line_magic_requirements.txt
 # .NudeNet/lite_classifier Checkpointのダウンロード
