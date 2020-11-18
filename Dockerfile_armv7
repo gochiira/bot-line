@@ -22,6 +22,10 @@ RUN pip install https://www.piwheels.org/simple/wrapt/wrapt-1.12.1-cp37-cp37m-li
 RUN pip install https://www.piwheels.org/simple/h5py/h5py-2.10.0-cp37-cp37m-linux_armv7l.whl
 RUN pip install https://www.piwheels.org/simple/termcolor/termcolor-1.1.0-py3-none-any.whl
 RUN pip install https://www.piwheels.org/simple/grpcio/grpcio-1.33.2-cp37-cp37m-linux_armv7l.whl
+RUN pip install https://www.piwheels.org/simple/kiwisolver/kiwisolver-1.3.1-cp37-cp37m-linux_armv7l.whl
+RUN pip install https://www.piwheels.org/simple/matplotlib/matplotlib-3.3.3-cp37-cp37m-linux_armv7l.whl
+RUN pip install https://www.piwheels.org/simple/pillow/Pillow-8.0.1-cp37-cp37m-linux_armv7l.whl
+RUN pip install https://www.piwheels.org/simple/scikit-image/scikit_image-0.17.2-cp37-cp37m-linux_armv7l.whl
 RUN pip install https://github.com/lhelontra/tensorflow-on-arm/releases/download/v2.3.0/tensorflow-2.3.0-cp37-none-linux_armv7l.whl
 RUN pip install -r requirements.txt
 RUN pip install -r line_magic_requirements.txt
