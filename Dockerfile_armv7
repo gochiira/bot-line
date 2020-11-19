@@ -4,7 +4,7 @@ FROM python:3.7.9-slim-buster
 WORKDIR /app
 COPY ./requirements.txt ./
 COPY ./line_magic/requirements.txt ./line_magic_requirements.txt
-RUN apt install libatlas-base-dev
+RUN apt-get install libatlas-base-dev
 RUN pip install https://www.piwheels.org/simple/numpy/numpy-1.18.5-cp37-cp37m-linux_armv7l.whl \
     && pip install https://www.piwheels.org/simple/scipy/scipy-1.4.1-cp37-cp37m-linux_armv7l.whl \
     && pip install https://www.piwheels.org/simple/keras-preprocessing/Keras_Preprocessing-1.1.2-py2.py3-none-any.whl \
