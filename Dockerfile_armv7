@@ -34,5 +34,4 @@ RUN python3 -c "from nudenet import NudeClassifierLite;x = NudeClassifierLite()"
 COPY . .
 # 起動環境設定
 EXPOSE 1204
-ENTRYPOINT [ "gunicorn", "main:app" ]
-CMD [ "-c", "gunicorn_config.py" ]
+CMD [ "gunicorn", "-b", "0.0.0.0:1204", "-w", "2", "-t", "1000", "main:app"]

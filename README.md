@@ -28,5 +28,5 @@ docker run --rm --env-file=<envファイルパス> -p <受付ポート>:1204 -t 
 docker build -t gochiira/bot-line-pc .
 ```
 ```text
-docker buildx build --platform linux/arm/v7 --file Dockerfile --t gochiira/bot-line .
+docker buildx build --platform linux/arm/v7 --file Dockerfile -t gochiira/bot-line .
 ```
